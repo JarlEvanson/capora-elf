@@ -1,39 +1,9 @@
 //! Definitions related to parsing the ELF file ident and header.
 
-/// The magic numbers expected in [`ElfIdent::magic`] when parsing.
-pub const ELF_MAGIC: [u8; 4] = [0x7F, b'E', b'L', b'F'];
-
-/// The current version of the ELF file header.
-pub const CURRENT_ELF_HEADER_VERSION: u8 = 1;
+use crate::raw::elf_ident::ElfIdent;
 
 /// The current verson of the object file format this program supports.
 pub const CURRENT_OBJECT_FILE_VERSION: u32 = 1;
-
-/// Block of machine-independent data to mark the file as an ELF file
-/// and provide enough information for the remainder of the ELF file to be
-/// decoded.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ElfIdent {
-    /// Holds magic numbers to identify the file as an ELF file.
-    pub magic: [u8; 4],
-    /// The file's class (native word size).
-    pub class: u8,
-    /// Encoding of data structures used by the object file container
-    /// and data contained in object file sections.
-    pub data: u8,
-    /// The ELF header.
-    pub header_version: u8,
-    /// Identifies the OS or ABI specific extensions used by this file.
-    pub os_abi: u8,
-    /// The version of the ABI to which the object file is targeted.
-    ///
-    /// This should be zero if the [`Elf64Header::os_abi`] field has no
-    /// definitions or no version values in the processor supplement.
-    pub abi_version: u8,
-    /// Unused bytes, should all be zero.
-    pub _padding: [u8; 7],
-}
 
 /// 32-bit version of the ELF file header.
 ///

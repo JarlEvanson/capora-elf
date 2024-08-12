@@ -8,7 +8,7 @@ use core::mem;
 use crate::{
     class::{ClassParse, UnsupportedClass},
     encoding::{EncodingParse, ParseIntegerError, UnsupportedEncoding},
-    raw::elf_header::{ElfIdent, CURRENT_ELF_HEADER_VERSION, ELF_MAGIC},
+    raw::elf_ident::ElfIdent,
 };
 
 pub mod class;
@@ -38,7 +38,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfFile<'slice, C, E> {
             }
             .into());
         }
-        if file[..4] == ELF_MAGIC {
+        if file[..4] == ElfIdent::MAGIC_BYTES {
             return Err(ParseElfFileError::InvalidMagicNumbers(
                 *file.first_chunk::<4>().unwrap_or(&[0; 4]),
             ));
@@ -58,7 +58,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfFile<'slice, C, E> {
 
         let header_version =
             encoding.parse_u8_at(mem::offset_of!(ElfIdent, header_version), file)?;
-        if header_version != CURRENT_ELF_HEADER_VERSION {
+        if header_version != ElfIdent::CURRENT_VERSION {
             return Err(ParseElfFileError::InvalidElfHeaderVersion(header_version));
         }
 
