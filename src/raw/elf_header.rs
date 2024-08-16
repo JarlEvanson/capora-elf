@@ -1,4 +1,4 @@
-//! Definitions related to parsing the ELF file ident and header.
+//! Definitions related to the ELF file header.
 
 use crate::raw::elf_ident::ElfIdent;
 
@@ -37,7 +37,7 @@ pub struct Elf32Header {
     ///
     /// If the ELF file has no section header table, this member should hold
     /// zero.
-    pub section_heaer_offset: u32,
+    pub section_header_offset: u32,
     /// Processor specific flags.
     pub flags: u32,
     /// The size of the ELF file's header in bytes.
@@ -95,7 +95,7 @@ pub struct Elf64Header {
     ///
     /// If the ELF file has no section header table, this member should hold
     /// zero.
-    pub section_heaer_offset: u64,
+    pub section_header_offset: u64,
     /// Processor specific flags.
     pub flags: u32,
     /// The size of the ELF file's header in bytes.
