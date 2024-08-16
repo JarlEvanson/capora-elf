@@ -42,7 +42,7 @@ impl ElfIdent {
 /// of various items in the ELF file format.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Class(u8);
+pub struct Class(pub u8);
 
 impl Class {
     /// Invalid [`Class`] specifier.
@@ -58,7 +58,7 @@ impl Class {
 /// in the object file sections.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Encoding(u8);
+pub struct Encoding(pub u8);
 
 impl Encoding {
     /// Invalid [`Encoding`] specifier.
@@ -76,7 +76,7 @@ impl Encoding {
 /// This field determines the interpretation of various OS or ABI specific values.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct OsAbi(u8);
+pub struct OsAbi(pub u8);
 
 impl OsAbi {
     /// No extensions or unspecified extensions.

@@ -124,7 +124,7 @@ pub struct Elf64Header {
 /// The type of the ELF file.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ElfType(u16);
+pub struct ElfType(pub u16);
 
 impl ElfType {
     /// No type.
@@ -142,7 +142,7 @@ impl ElfType {
 /// The required architecture of the ELF file.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Machine(u16);
+pub struct Machine(pub u16);
 
 impl Machine {
     /// No required machine.
