@@ -2,8 +2,10 @@
 
 use core::{error, fmt};
 
+use crate::raw::elf_ident::Class as RawClass;
+
 /// A trait used to multiplex on the different classes of an [`ElfFile`].
-pub trait ClassParse: Clone + Copy + Default + PartialEq + Eq {
+pub trait ClassParse: Clone + Copy + PartialEq + Eq {
     /// Retrieves the corresponding class-aware integer parsing object from
     /// [`ElfHeader::class`].
     ///
@@ -19,6 +21,7 @@ pub trait ClassParse: Clone + Copy + Default + PartialEq + Eq {
 
 /// Indicates how the ELF file should be parsed with respect to differences in
 /// different sized architectures.
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Class {
     /// Should be parsed as a 32-bit format.
     Class32,
@@ -45,7 +48,7 @@ impl fmt::Display for UnsupportedClass {
 impl error::Error for UnsupportedClass {}
 
 /// A zero-sized object indicating that support for only [`Class32`] [`ElfFile`]s.
-#[derive(Clone, Copy, Hash, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Class32;
 
 impl ClassParse for Class32 {
@@ -62,7 +65,7 @@ impl ClassParse for Class32 {
 }
 
 /// A zero-sized object indicating that support for only [`Class64`] [`ElfFile`]s.
-#[derive(Clone, Copy, Hash, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Class64;
 
 impl ClassParse for Class64 {
@@ -80,32 +83,21 @@ impl ClassParse for Class64 {
 
 /// An object used to dispatch the [`ElfFile`] encoding to be used at runtime.
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum AnyClass {
-    /// Class is [`Class32`].
-    Class32,
-    /// Class is [`Class64`].
-    Class64,
-}
+pub struct AnyClass(Class);
 
 impl ClassParse for AnyClass {
     fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClass> {
-        match elf_ident_class {
-            1 => Ok(Self::Class32),
-            2 => Ok(Self::Class64),
-            unsupported => Err(UnsupportedClass(unsupported)),
+        match RawClass(elf_ident_class) {
+            RawClass::CLASS32 => Ok(Self(Class::Class32)),
+            RawClass::CLASS64 => Ok(Self(Class::Class64)),
+            RawClass(unsupported) => Err(UnsupportedClass(unsupported)),
         }
     }
 
     fn into_class(self) -> Class {
         match self {
-            Self::Class32 => Class::Class32,
-            Self::Class64 => Class::Class64,
+            Self(Class::Class32) => Class::Class32,
+            Self(Class::Class64) => Class::Class64,
         }
-    }
-}
-
-impl Default for AnyClass {
-    fn default() -> Self {
-        Self::Class64
     }
 }

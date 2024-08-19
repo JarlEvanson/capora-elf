@@ -2,8 +2,10 @@
 
 use core::{error, fmt, mem};
 
+use crate::raw::elf_ident::Encoding as RawEncoding;
+
 /// An all-safe-code encoding-aware integer parsing trait.
-pub trait EncodingParse: Clone + Copy + Default + PartialEq + Eq {
+pub trait EncodingParse: Clone + Copy + PartialEq + Eq {
     /// Retrieves the corresponding encoding-aware integer parsing object from
     /// [`ElfHeader::data`].
     ///
@@ -12,6 +14,9 @@ pub trait EncodingParse: Clone + Copy + Default + PartialEq + Eq {
     /// Returns [`UnsupportedEncoding`] if the [`EncodingParse`] type doesn't support
     /// parsing the encoding specified by `elf_ident_data`.
     fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncoding>;
+
+    /// Returns the [`Encoding`] of the current ELF file.
+    fn into_encoding(self) -> Encoding;
 
     /// Retrives the [`u8`] at `offset` bytes from the start of `data`
     ///
@@ -51,7 +56,17 @@ pub trait EncodingParse: Clone + Copy + Default + PartialEq + Eq {
     fn parse_i64_at(self, offset: usize, data: &[u8]) -> Result<i64, ParseIntegerError>;
 }
 
-/// An error that occurs when the code does not support a particular [`EncodingParse`]
+/// Indicates how the ELF file should be parsed with respect to differences in the encoding of
+/// integers.
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Encoding {
+    /// All integers should be parsed as two's complement little-endian format.
+    TwosComplementLittleEndian,
+    /// All integers should be parsed as two's complement big-endian format.
+    TwosComplementBigEndian,
+}
+
+/// An error that occurs when the code does not support a particular [`Encoding`]
 /// object.
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UnsupportedEncoding(u8);
@@ -109,7 +124,7 @@ impl error::Error for ParseIntegerError {}
 
 /// A zero-sized object offering methods for safe unaligned,
 /// two's complement, little-endian parsing.
-#[derive(Clone, Copy, Hash, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LittleEndian;
 
 impl EncodingParse for LittleEndian {
@@ -118,6 +133,10 @@ impl EncodingParse for LittleEndian {
             return Err(UnsupportedEncoding(elf_ident_data));
         }
         Ok(LittleEndian)
+    }
+
+    fn into_encoding(self) -> Encoding {
+        Encoding::TwosComplementLittleEndian
     }
 
     fn parse_u8_at(self, offset: usize, data: &[u8]) -> Result<u8, ParseIntegerError> {
@@ -237,7 +256,7 @@ impl EncodingParse for LittleEndian {
 
 /// A zero-sized object offering methods for safe unaligned,
 /// two's complement, big-endian parsing.
-#[derive(Clone, Copy, Hash, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BigEndian;
 
 impl EncodingParse for BigEndian {
@@ -246,6 +265,10 @@ impl EncodingParse for BigEndian {
             return Err(UnsupportedEncoding(elf_ident_data));
         }
         Ok(BigEndian)
+    }
+
+    fn into_encoding(self) -> Encoding {
+        Encoding::TwosComplementBigEndian
     }
 
     fn parse_u8_at(self, offset: usize, data: &[u8]) -> Result<u8, ParseIntegerError> {
@@ -365,67 +388,60 @@ impl EncodingParse for BigEndian {
 
 /// An object used to dispatch the encoding to be read from at runtime.
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum AnyEndian {
-    /// Encoding is [`LittleEndian`].
-    LittleEndian(LittleEndian),
-    /// Encoding is [`BigEndian`].
-    BigEndian(BigEndian),
-}
+pub struct AnyEncoding(Encoding);
 
-impl EncodingParse for AnyEndian {
+impl EncodingParse for AnyEncoding {
     fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncoding> {
-        match elf_ident_data {
-            1 => Ok(AnyEndian::LittleEndian(LittleEndian)),
-            2 => Ok(AnyEndian::BigEndian(BigEndian)),
-            unsupported => Err(UnsupportedEncoding(unsupported)),
+        match RawEncoding(elf_ident_data) {
+            RawEncoding::LITTLE_ENDIAN_TWOS => Ok(Self(Encoding::TwosComplementLittleEndian)),
+            RawEncoding::BIG_ENDIAN_TWOS => Ok(Self(Encoding::TwosComplementBigEndian)),
+            RawEncoding(unsupported) => Err(UnsupportedEncoding(unsupported)),
         }
+    }
+
+    fn into_encoding(self) -> Encoding {
+        self.0
     }
 
     fn parse_u8_at(self, offset: usize, data: &[u8]) -> Result<u8, ParseIntegerError> {
         match self {
-            Self::LittleEndian(encoding) => encoding.parse_u8_at(offset, data),
-            Self::BigEndian(encoding) => encoding.parse_u8_at(offset, data),
+            Self(Encoding::TwosComplementLittleEndian) => LittleEndian.parse_u8_at(offset, data),
+            Self(Encoding::TwosComplementBigEndian) => BigEndian.parse_u8_at(offset, data),
         }
     }
 
     fn parse_u16_at(self, offset: usize, data: &[u8]) -> Result<u16, ParseIntegerError> {
         match self {
-            Self::LittleEndian(encoding) => encoding.parse_u16_at(offset, data),
-            Self::BigEndian(encoding) => encoding.parse_u16_at(offset, data),
+            Self(Encoding::TwosComplementLittleEndian) => LittleEndian.parse_u16_at(offset, data),
+            Self(Encoding::TwosComplementBigEndian) => BigEndian.parse_u16_at(offset, data),
         }
     }
 
     fn parse_u32_at(self, offset: usize, data: &[u8]) -> Result<u32, ParseIntegerError> {
         match self {
-            Self::LittleEndian(encoding) => encoding.parse_u32_at(offset, data),
-            Self::BigEndian(encoding) => encoding.parse_u32_at(offset, data),
+            Self(Encoding::TwosComplementLittleEndian) => LittleEndian.parse_u32_at(offset, data),
+            Self(Encoding::TwosComplementBigEndian) => BigEndian.parse_u32_at(offset, data),
         }
     }
 
     fn parse_u64_at(self, offset: usize, data: &[u8]) -> Result<u64, ParseIntegerError> {
         match self {
-            Self::LittleEndian(encoding) => encoding.parse_u64_at(offset, data),
-            Self::BigEndian(encoding) => encoding.parse_u64_at(offset, data),
+            Self(Encoding::TwosComplementLittleEndian) => LittleEndian.parse_u64_at(offset, data),
+            Self(Encoding::TwosComplementBigEndian) => BigEndian.parse_u64_at(offset, data),
         }
     }
 
     fn parse_i32_at(self, offset: usize, data: &[u8]) -> Result<i32, ParseIntegerError> {
         match self {
-            Self::LittleEndian(encoding) => encoding.parse_i32_at(offset, data),
-            Self::BigEndian(encoding) => encoding.parse_i32_at(offset, data),
+            Self(Encoding::TwosComplementLittleEndian) => LittleEndian.parse_i32_at(offset, data),
+            Self(Encoding::TwosComplementBigEndian) => BigEndian.parse_i32_at(offset, data),
         }
     }
 
     fn parse_i64_at(self, offset: usize, data: &[u8]) -> Result<i64, ParseIntegerError> {
         match self {
-            Self::LittleEndian(encoding) => encoding.parse_i64_at(offset, data),
-            Self::BigEndian(encoding) => encoding.parse_i64_at(offset, data),
+            Self(Encoding::TwosComplementLittleEndian) => LittleEndian.parse_i64_at(offset, data),
+            Self(Encoding::TwosComplementBigEndian) => BigEndian.parse_i64_at(offset, data),
         }
-    }
-}
-
-impl Default for AnyEndian {
-    fn default() -> Self {
-        AnyEndian::LittleEndian(LittleEndian)
     }
 }
