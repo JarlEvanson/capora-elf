@@ -82,6 +82,16 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
             .parse_u8_at(mem::offset_of!(RawElfIdent, abi_version), self.slice)
             .unwrap()
     }
+
+    /// Returns the [`ClassParse`] that this ELF identifier header uses.
+    pub fn class_parse(&self) -> C {
+        self.class
+    }
+
+    /// Returns the [`EncodingParse`] that this ELF identifier header uses.
+    pub fn encoding_parse(&self) -> E {
+        self.encoding
+    }
 }
 
 /// Various errors that can occur while parsing a [`ElfIdent`].
