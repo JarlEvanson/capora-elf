@@ -6,7 +6,11 @@ use crate::{
     class::{Class, ClassParse},
     elf_ident::{ElfIdent, ParseElfIdentError},
     encoding::{EncodingParse, ParseIntegerError},
-    raw::elf_header::{Elf32Header, Elf64Header, ElfType, Machine, CURRENT_OBJECT_FILE_VERSION},
+    raw::{
+        elf_header::{Elf32Header, Elf64Header, ElfType, Machine, CURRENT_OBJECT_FILE_VERSION},
+        elf_program_header::Elf64ProgramHeader,
+        elf_section_header::Elf64SectionHeader,
+    },
 };
 
 /// The header of an ELF file, which contains important information about the layout and
@@ -55,6 +59,11 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
                     mem::offset_of!(Elf64Header, program_header_entry_size),
                     file,
                 )? as u64;
+                if program_header_entry_size
+                    < mem::size_of::<Elf64ProgramHeader>().try_into().unwrap()
+                {
+                    return Err(ParseElfHeaderError::InvalidProgramHeaderSize);
+                }
 
                 let program_header_table_size = program_header_count
                     .checked_mul(program_header_entry_size)
@@ -87,6 +96,11 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
                     mem::offset_of!(Elf64Header, section_header_entry_size),
                     file,
                 )? as u64;
+                if section_header_entry_size
+                    < mem::size_of::<Elf64SectionHeader>().try_into().unwrap()
+                {
+                    return Err(ParseElfHeaderError::InvalidSectionHeaderSize);
+                }
 
                 let section_header_table_size = section_header_count
                     .checked_mul(section_header_entry_size)
@@ -326,6 +340,10 @@ pub enum ParseElfHeaderError {
     ParseElfIdentError(ParseElfIdentError),
     /// The version of the ELF file is unsupported.
     UnsupportedElfFileVersion,
+    /// The given size of [`ElfProgramHeader`]s is smaller than supported.
+    InvalidProgramHeaderSize,
+    /// The given size of [`ElfSectionHeader`]s is smaller than supported.
+    InvalidSectionHeaderSize,
     /// An error ocurred while parsing an integer.
     ParseIntegerError(ParseIntegerError),
 }
