@@ -4,6 +4,8 @@
 ///
 /// This allows for locating and loading data relevant to program
 /// execution.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Elf32ProgramHeader {
     /// The type of the segment.
     pub r#type: SegmentType,
@@ -27,6 +29,8 @@ pub struct Elf32ProgramHeader {
 ///
 /// This allows for locating and loading data relevant to program
 /// execution.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Elf64ProgramHeader {
     /// The type of the segment.
     pub r#type: SegmentType,

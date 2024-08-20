@@ -3,6 +3,8 @@
 /// 32-bit version of an ELF section header.
 ///
 /// This allows for locating and interacting with data relevant for linking object files.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Elf32SectionHeader {
     /// The index into the section name string table that identifies the name of the section.
     pub name: u32,
@@ -30,6 +32,8 @@ pub struct Elf32SectionHeader {
 /// 32-bit version of an ELF section header.
 ///
 /// This allows for locating and interacting with data relevant for linking object files.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Elf64SectionHeader {
     /// The index into the section name string table that identifies the name of the section.
     pub name: u32,
