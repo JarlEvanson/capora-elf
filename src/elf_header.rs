@@ -6,7 +6,7 @@ use crate::{
     class::{Class, ClassParse},
     elf_ident::{ElfIdent, ParseElfIdentError},
     encoding::{EncodingParse, ParseIntegerError},
-    raw::elf_header::{Elf32Header, Elf64Header, CURRENT_OBJECT_FILE_VERSION},
+    raw::elf_header::{Elf32Header, Elf64Header, ElfType, Machine, CURRENT_OBJECT_FILE_VERSION},
 };
 
 /// The header of an ELF file, which contains important information about the layout and
@@ -117,6 +117,38 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
         })
     }
 
+    /// The type of the ELF file.
+    pub fn elf_type(&self) -> ElfType {
+        let elf_type_value = match self.class.into_class() {
+            Class::Class32 => self
+                .encoding
+                .parse_u16_at(mem::offset_of!(Elf32Header, r#type), self.slice)
+                .unwrap(),
+            Class::Class64 => self
+                .encoding
+                .parse_u16_at(mem::offset_of!(Elf64Header, r#type), self.slice)
+                .unwrap(),
+        };
+
+        ElfType(elf_type_value)
+    }
+
+    /// The machine architecture that this object file is targeted towards.
+    pub fn machine(&self) -> Machine {
+        let machine_value = match self.class.into_class() {
+            Class::Class32 => self
+                .encoding
+                .parse_u16_at(mem::offset_of!(Elf32Header, machine), self.slice)
+                .unwrap(),
+            Class::Class64 => self
+                .encoding
+                .parse_u16_at(mem::offset_of!(Elf64Header, machine), self.slice)
+                .unwrap(),
+        };
+
+        Machine(machine_value)
+    }
+
     /// Returns the virtual address to which the system first transfers control.
     pub fn entry(&self) -> u64 {
         match self.class.into_class() {
@@ -166,6 +198,46 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
         }
     }
 
+    /// Returns the number of program headers this ELF file contains.
+    pub fn program_header_count(&self) -> u16 {
+        match self.class.into_class() {
+            Class::Class32 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf32Header, program_header_count),
+                    self.slice,
+                )
+                .unwrap(),
+            Class::Class64 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf64Header, program_header_count),
+                    self.slice,
+                )
+                .unwrap(),
+        }
+    }
+
+    /// Returns the size of the program headers this ELF file contains.
+    pub fn program_header_entry_size(&self) -> u16 {
+        match self.class.into_class() {
+            Class::Class32 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf32Header, program_header_entry_size),
+                    self.slice,
+                )
+                .unwrap(),
+            Class::Class64 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf64Header, program_header_entry_size),
+                    self.slice,
+                )
+                .unwrap(),
+        }
+    }
+
     /// Returns the offset, in bytes, from the start of the file to the start of the section header
     /// table.
     pub fn section_header_offset(&self) -> u64 {
@@ -181,6 +253,66 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
                 .encoding
                 .parse_u64_at(
                     mem::offset_of!(Elf64Header, section_header_offset),
+                    self.slice,
+                )
+                .unwrap(),
+        }
+    }
+
+    /// Returns the number of section headers this ELF file contains.
+    pub fn section_header_count(&self) -> u16 {
+        match self.class.into_class() {
+            Class::Class32 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf32Header, section_header_count),
+                    self.slice,
+                )
+                .unwrap(),
+            Class::Class64 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf64Header, section_header_count),
+                    self.slice,
+                )
+                .unwrap(),
+        }
+    }
+
+    /// Returns the size of the program headers this ELF file contains.
+    pub fn section_header_entry_size(&self) -> u16 {
+        match self.class.into_class() {
+            Class::Class32 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf32Header, section_header_entry_size),
+                    self.slice,
+                )
+                .unwrap(),
+            Class::Class64 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf64Header, section_header_entry_size),
+                    self.slice,
+                )
+                .unwrap(),
+        }
+    }
+
+    /// Returns the section header index of the string table for section names.
+    pub fn section_header_string_table_index(&self) -> u16 {
+        match self.class.into_class() {
+            Class::Class32 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf32Header, section_header_string_table_index),
+                    self.slice,
+                )
+                .unwrap(),
+            Class::Class64 => self
+                .encoding
+                .parse_u16_at(
+                    mem::offset_of!(Elf64Header, section_header_string_table_index),
                     self.slice,
                 )
                 .unwrap(),
