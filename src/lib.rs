@@ -12,6 +12,7 @@ use crate::{
 };
 
 pub mod class;
+pub mod elf_header;
 pub mod elf_ident;
 pub mod encoding;
 pub mod raw;
