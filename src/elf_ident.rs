@@ -3,8 +3,8 @@
 use core::mem;
 
 use crate::{
-    class::{Class, ClassParse, UnsupportedClass},
-    encoding::{Encoding, EncodingParse, ParseIntegerError, UnsupportedEncoding},
+    class::{Class, ClassParse, UnsupportedClassError},
+    encoding::{Encoding, EncodingParse, ParseIntegerError, UnsupportedEncodingError},
     field_size,
     raw::elf_ident::{ElfIdent as RawElfIdent, OsAbi},
 };
@@ -99,9 +99,9 @@ pub enum ParseElfIdentError {
     /// The bytes occupying the magic bytes location did not match the specified ELF magic bytes.
     InvalidMagicBytes,
     /// The class of the ELF file is unsupported.
-    UnsupportedClass(UnsupportedClass),
+    UnsupportedClassError(UnsupportedClassError),
     /// The encoding of the ELF file is unsupported.
-    UnsupportedEncoding(UnsupportedEncoding),
+    UnsupportedEncodingError(UnsupportedEncodingError),
     /// The ELF header version is unsupported.
     UnsupportedElfHeaderVersion,
     /// The padding of the header is non-zero.
@@ -116,14 +116,14 @@ impl From<ParseIntegerError> for ParseElfIdentError {
     }
 }
 
-impl From<UnsupportedClass> for ParseElfIdentError {
-    fn from(value: UnsupportedClass) -> Self {
-        ParseElfIdentError::UnsupportedClass(value)
+impl From<UnsupportedClassError> for ParseElfIdentError {
+    fn from(value: UnsupportedClassError) -> Self {
+        ParseElfIdentError::UnsupportedClassError(value)
     }
 }
 
-impl From<UnsupportedEncoding> for ParseElfIdentError {
-    fn from(value: UnsupportedEncoding) -> Self {
-        ParseElfIdentError::UnsupportedEncoding(value)
+impl From<UnsupportedEncodingError> for ParseElfIdentError {
+    fn from(value: UnsupportedEncodingError) -> Self {
+        ParseElfIdentError::UnsupportedEncodingError(value)
     }
 }

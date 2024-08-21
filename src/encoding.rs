@@ -11,9 +11,9 @@ pub trait EncodingParse: Clone + Copy + PartialEq + Eq {
     ///
     /// # Errors
     ///
-    /// Returns [`UnsupportedEncoding`] if the [`EncodingParse`] type doesn't support
+    /// Returns [`UnsupportedEncodingError`] if the [`EncodingParse`] type doesn't support
     /// parsing the encoding specified by `elf_ident_data`.
-    fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncoding>;
+    fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncodingError>;
 
     /// Returns the [`Encoding`] of the current ELF file.
     fn into_encoding(self) -> Encoding;
@@ -69,20 +69,25 @@ pub enum Encoding {
 /// An error that occurs when the code does not support a particular [`Encoding`]
 /// object.
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct UnsupportedEncoding(u8);
+pub struct UnsupportedEncodingError(u8);
 
-impl fmt::Display for UnsupportedEncoding {
+impl fmt::Display for UnsupportedEncodingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.0 {
-            0 => writeln!(f, "invalid data encoding not supported"),
-            1 => writeln!(f, "two's complement little endian not supported"),
-            2 => writeln!(f, "two's complement big endian not supported"),
-            encoding => writeln!(f, "unknown data encoding({encoding}) not supported"),
+        match RawEncoding(self.0) {
+            RawEncoding::NONE => writeln!(f, "no data encoding ELF parsing not supported"),
+            RawEncoding::LITTLE_ENDIAN_TWOS => writeln!(
+                f,
+                "two's complement little-endian ELF parsing not supported"
+            ),
+            RawEncoding::BIG_ENDIAN_TWOS => {
+                writeln!(f, "two's complement big-endian parsing not supported")
+            }
+            RawEncoding(encoding) => writeln!(f, "unknown data encoding({encoding}) not supported"),
         }
     }
 }
 
-impl error::Error for UnsupportedEncoding {}
+impl error::Error for UnsupportedEncodingError {}
 
 /// An error that is returned when an error happens when parsing an integer
 /// using [`EncodingParse`].
@@ -128,9 +133,9 @@ impl error::Error for ParseIntegerError {}
 pub struct LittleEndian;
 
 impl EncodingParse for LittleEndian {
-    fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncoding> {
+    fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncodingError> {
         if elf_ident_data != 1 {
-            return Err(UnsupportedEncoding(elf_ident_data));
+            return Err(UnsupportedEncodingError(elf_ident_data));
         }
         Ok(LittleEndian)
     }
@@ -260,9 +265,9 @@ impl EncodingParse for LittleEndian {
 pub struct BigEndian;
 
 impl EncodingParse for BigEndian {
-    fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncoding> {
+    fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncodingError> {
         if elf_ident_data != 2 {
-            return Err(UnsupportedEncoding(elf_ident_data));
+            return Err(UnsupportedEncodingError(elf_ident_data));
         }
         Ok(BigEndian)
     }
@@ -391,11 +396,11 @@ impl EncodingParse for BigEndian {
 pub struct AnyEncoding(Encoding);
 
 impl EncodingParse for AnyEncoding {
-    fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncoding> {
+    fn from_elf_data(elf_ident_data: u8) -> Result<Self, UnsupportedEncodingError> {
         match RawEncoding(elf_ident_data) {
             RawEncoding::LITTLE_ENDIAN_TWOS => Ok(Self(Encoding::TwosComplementLittleEndian)),
             RawEncoding::BIG_ENDIAN_TWOS => Ok(Self(Encoding::TwosComplementBigEndian)),
-            RawEncoding(unsupported) => Err(UnsupportedEncoding(unsupported)),
+            RawEncoding(unsupported) => Err(UnsupportedEncodingError(unsupported)),
         }
     }
 

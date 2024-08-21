@@ -11,9 +11,9 @@ pub trait ClassParse: Clone + Copy + PartialEq + Eq {
     ///
     /// # Errors
     ///
-    /// Returns [`UnsupportedClass`] if the [`ClassParse`] type doesn't support
+    /// Returns [`UnsupportedClassError`] if the [`ClassParse`] type doesn't support
     /// parsing the class specified by `elf_ident_class`.
-    fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClass>;
+    fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClassError>;
 
     /// Returns the [`Class`] of the current ELF file.
     fn into_class(self) -> Class;
@@ -32,29 +32,29 @@ pub enum Class {
 /// An error that ocurrs when the code does not support a particular [`ClassParse`]
 /// object.
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct UnsupportedClass(u8);
+pub struct UnsupportedClassError(u8);
 
-impl fmt::Display for UnsupportedClass {
+impl fmt::Display for UnsupportedClassError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.0 {
-            0 => writeln!(f, "invalid class not supported"),
-            1 => writeln!(f, "32-bit class not supported"),
-            2 => writeln!(f, "64-bit class not supported"),
-            class => writeln!(f, "unknown class({class}) not supported"),
+        match RawClass(self.0) {
+            RawClass::NONE => writeln!(f, "no class ELF parsing not supported"),
+            RawClass::CLASS32 => writeln!(f, "32-bit class ELF parsing not supported"),
+            RawClass::CLASS64 => writeln!(f, "64-bit class ELF parsing not supported"),
+            RawClass(class) => writeln!(f, "unknown class({class}) not supported"),
         }
     }
 }
 
-impl error::Error for UnsupportedClass {}
+impl error::Error for UnsupportedClassError {}
 
 /// A zero-sized object indicating that support for only [`Class32`] [`ElfFile`]s.
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Class32;
 
 impl ClassParse for Class32 {
-    fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClass> {
-        if elf_ident_class != 1 {
-            return Err(UnsupportedClass(elf_ident_class));
+    fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClassError> {
+        if elf_ident_class != RawClass::CLASS32.0 {
+            return Err(UnsupportedClassError(elf_ident_class));
         }
         Ok(Class32)
     }
@@ -69,9 +69,9 @@ impl ClassParse for Class32 {
 pub struct Class64;
 
 impl ClassParse for Class64 {
-    fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClass> {
-        if elf_ident_class != 2 {
-            return Err(UnsupportedClass(elf_ident_class));
+    fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClassError> {
+        if elf_ident_class != RawClass::CLASS64.0 {
+            return Err(UnsupportedClassError(elf_ident_class));
         }
         Ok(Class64)
     }
@@ -86,11 +86,11 @@ impl ClassParse for Class64 {
 pub struct AnyClass(Class);
 
 impl ClassParse for AnyClass {
-    fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClass> {
+    fn from_elf_class(elf_ident_class: u8) -> Result<Self, UnsupportedClassError> {
         match RawClass(elf_ident_class) {
             RawClass::CLASS32 => Ok(Self(Class::Class32)),
             RawClass::CLASS64 => Ok(Self(Class::Class64)),
-            RawClass(unsupported) => Err(UnsupportedClass(unsupported)),
+            RawClass(unsupported) => Err(UnsupportedClassError(unsupported)),
         }
     }
 
