@@ -50,6 +50,13 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
         })
     }
 
+    /// Returns the magic bytes that identify this file as an ELF file.
+    pub fn magic(&self) -> [u8; 4] {
+        let mut bytes = [0; 4];
+        bytes.copy_from_slice(&self.slice[..4]);
+        bytes
+    }
+
     /// Returns the [`Class`] of the ELF file.
     pub fn class(&self) -> Class {
         self.class.into_class()
@@ -58,6 +65,12 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
     /// Returns the [`Encoding`] of the ELF file.
     pub fn encoding(&self) -> Encoding {
         self.encoding.into_encoding()
+    }
+
+    /// Returns the version of the ELF ident header.
+    pub fn header_version(&self) -> u8 {
+        self.encoding
+            .parse_u8_at(mem::offset_of!(RawElfIdent, header_version), self.slice)
     }
 
     /// Returns the [`OsAbi`] of the ELF file.
