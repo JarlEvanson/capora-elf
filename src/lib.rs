@@ -45,6 +45,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfFile<'slice, C, E> {
 }
 
 /// Various errors that can occur while parsing an [`ElfFile`].
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ParseElfFileError {
     /// An error ocurred while parsing an [`ElfHeader`].
     ParseElfHeaderError(ParseElfHeaderError),
