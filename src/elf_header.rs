@@ -16,9 +16,9 @@ use crate::{
 /// The header of an ELF file, which contains important information about the layout and
 /// interpretation of the ELF file.
 pub struct ElfHeader<'slice, C: ClassParse, E: EncodingParse> {
-    slice: &'slice [u8],
-    class: C,
-    encoding: E,
+    pub(crate) slice: &'slice [u8],
+    pub(crate) class: C,
+    pub(crate) encoding: E,
 }
 
 impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
@@ -217,6 +217,15 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
                 mem::offset_of!(Elf64Header, section_header_string_table_index),
                 self.slice,
             ),
+        }
+    }
+
+    /// Returns the [`ElfIdent`] this [`ElfHeader`] contains.
+    pub fn elf_ident(&self) -> ElfIdent<'slice, C, E> {
+        ElfIdent {
+            slice: self.slice,
+            class: self.class,
+            encoding: self.encoding,
         }
     }
 }

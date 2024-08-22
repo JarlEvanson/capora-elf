@@ -11,9 +11,9 @@ use crate::{
 
 /// Basic information about an ELF file that can be obtained in an architecture independent manner.
 pub struct ElfIdent<'slice, C: ClassParse, E: EncodingParse> {
-    slice: &'slice [u8],
-    class: C,
-    encoding: E,
+    pub(crate) slice: &'slice [u8],
+    pub(crate) class: C,
+    pub(crate) encoding: E,
 }
 
 impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
