@@ -38,7 +38,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
 
         if file[mem::offset_of!(RawElfIdent, _padding)..][..field_size!(RawElfIdent, _padding)]
             .iter()
-            .all(|&val| val == 0)
+            .any(|&val| val != 0)
         {
             return Err(ParseElfIdentError::NonZeroPadding);
         }
