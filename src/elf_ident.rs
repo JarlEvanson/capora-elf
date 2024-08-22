@@ -1,6 +1,6 @@
 //! Definitions and interfaces for interacting with the ELF identifier.
 
-use core::mem;
+use core::{fmt, mem};
 
 use crate::{
     class::{Class, ClassParse, UnsupportedClassError},
@@ -10,6 +10,7 @@ use crate::{
 };
 
 /// Basic information about an ELF file that can be obtained in an architecture independent manner.
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct ElfIdent<'slice, C: ClassParse, E: EncodingParse> {
     pub(crate) slice: &'slice [u8],
     pub(crate) class: C,
@@ -98,7 +99,23 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
     }
 }
 
+impl<'slice, C: ClassParse, E: EncodingParse> fmt::Debug for ElfIdent<'slice, C, E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_struct = f.debug_struct("ElfIdent");
+
+        debug_struct.field("magic", &self.magic());
+        debug_struct.field("class", &self.class());
+        debug_struct.field("data", &self.encoding());
+        debug_struct.field("header_version", &self.header_version());
+        debug_struct.field("os_abi", &self.os_abi());
+        debug_struct.field("abi_version", &self.abi_version());
+
+        debug_struct.finish()
+    }
+}
+
 /// Various errors that can occur while parsing a [`ElfIdent`].
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ParseElfIdentError {
     /// The given `file` was too small to contain an [`ElfIdent`].
     FileTooSmall,
