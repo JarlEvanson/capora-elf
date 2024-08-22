@@ -49,14 +49,16 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
                     return Err(ParseElfHeaderError::InvalidElfHeaderSize);
                 }
 
-                if (elf_header.program_header_entry_size() as usize)
-                    < mem::size_of::<Elf64ProgramHeader>()
+                if elf_header.program_header_count() != 0
+                    && (elf_header.program_header_entry_size() as usize)
+                        < mem::size_of::<Elf64ProgramHeader>()
                 {
                     return Err(ParseElfHeaderError::InvalidProgramHeaderSize);
                 }
 
-                if (elf_header.section_header_entry_size() as usize)
-                    < mem::size_of::<Elf64SectionHeader>()
+                if elf_header.section_header_count() != 0
+                    && (elf_header.section_header_entry_size() as usize)
+                        < mem::size_of::<Elf64SectionHeader>()
                 {
                     return Err(ParseElfHeaderError::InvalidSectionHeaderSize);
                 }
