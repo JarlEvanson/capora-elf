@@ -12,6 +12,7 @@ use crate::{
 pub mod class;
 pub mod elf_header;
 pub mod elf_ident;
+pub mod elf_program_header;
 pub mod encoding;
 pub mod raw;
 
@@ -35,6 +36,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfFile<'slice, C, E> {
         })
     }
 
+    /// Returns the [`ElfHeader`] of this [`ElfFile`].
     pub fn header(&self) -> ElfHeader<'slice, C, E> {
         ElfHeader {
             slice: self.slice,
