@@ -10,7 +10,7 @@ use crate::{
 
 /// Structure that describes how to locate and load data and configuration relevant to program
 /// execution.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct ElfProgramHeader<'slice, C: ClassParse, E: EncodingParse> {
     pub(crate) slice: &'slice [u8],
     pub(crate) class: C,
@@ -18,26 +18,21 @@ pub struct ElfProgramHeader<'slice, C: ClassParse, E: EncodingParse> {
 }
 
 impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeader<'slice, C, E> {
-    /// Parses an [`ElfProgramHeader`] from the provided `file`.
+    /// Parses an [`ElfProgramHeader`] from the provided `slice`.
     pub fn parse(
-        file: &'slice [u8],
-        offset: usize,
+        slice: &'slice [u8],
         class: C,
         encoding: E,
     ) -> Result<Self, ParseElfProgramHeaderError> {
         match class.into_class() {
             Class::Class32 => todo!(),
             Class::Class64 => {
-                if offset
-                    .checked_add(mem::size_of::<Elf64ProgramHeader>())
-                    .ok_or(ParseElfProgramHeaderError::FileTooSmall)?
-                    >= file.len()
-                {
-                    return Err(ParseElfProgramHeaderError::FileTooSmall);
+                if slice.len() < mem::size_of::<Elf64ProgramHeader>() {
+                    return Err(ParseElfProgramHeaderError::SliceTooSmall);
                 }
 
                 let elf_program_header = Self {
-                    slice: &file[offset..],
+                    slice,
                     class,
                     encoding,
                 };
@@ -158,10 +153,83 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeader<'slice, C, E> {
 /// Various errors that can occur while parsing an [`ElfProgramHeader`].
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ParseElfProgramHeaderError {
-    /// The given file was too small to contain an [`ElfProgramHeader`] at offset `offset`.
-    FileTooSmall,
+    /// The given slice was too small to contain an [`ElfProgramHeader`].
+    SliceTooSmall,
     /// The alignment of the segment is not a power of two.
     InvalidAlignment,
     /// The segment pointed to by the [`ElfProgramHeader`] is not properly aligned.
     UnalignedSegment,
+}
+
+/// A table of [`ElfProgramHeader`]s.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub struct ElfProgramHeaderTable<'slice, C: ClassParse, E: EncodingParse> {
+    pub(crate) slice: &'slice [u8],
+    pub(crate) entry_count: usize,
+    pub(crate) entry_size: usize,
+    pub(crate) class: C,
+    pub(crate) encoding: E,
+}
+
+impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeaderTable<'slice, C, E> {
+    /// Parses an [`ElfProgramHeaderTable`] from the provided `slice`.
+    pub fn parse(
+        slice: &'slice [u8],
+        entry_count: usize,
+        entry_size: usize,
+        class: C,
+        encoding: E,
+    ) -> Result<Self, ParseElfProgramHeaderTableError> {
+        let total_size = entry_count
+            .checked_mul(entry_size)
+            .ok_or(ParseElfProgramHeaderTableError::SliceTooSmall)?;
+        if slice.len() < total_size {
+            return Err(ParseElfProgramHeaderTableError::SliceTooSmall);
+        }
+
+        let elf_program_header_table = Self {
+            slice,
+            entry_count,
+            entry_size,
+            class,
+            encoding,
+        };
+
+        for index in 0..entry_count {
+            ElfProgramHeader::parse(&slice[index * entry_size..], class, encoding).map_err(
+                |error| ParseElfProgramHeaderTableError::ParseElfProgramHeaderError {
+                    index,
+                    error,
+                },
+            )?;
+        }
+
+        Ok(elf_program_header_table)
+    }
+
+    /// Returns the [`ElfProgramHeader`] located at `index`.
+    pub fn get(&self, index: usize) -> Option<ElfProgramHeader<'slice, C, E>> {
+        if index >= self.entry_count {
+            return None;
+        }
+
+        Some(ElfProgramHeader {
+            slice: &self.slice[index * self.entry_size..],
+            class: self.class,
+            encoding: self.encoding,
+        })
+    }
+}
+
+/// Various errors that can occur while parsing an [`ElfProgramHeaderTable`].
+pub enum ParseElfProgramHeaderTableError {
+    /// The given slice was too small to contain the specified [`ElfProgramHeaderTable`].
+    SliceTooSmall,
+    /// An error occurred while parsing the [`ElfProgramHeader`] at `index`.
+    ParseElfProgramHeaderError {
+        /// The index of the [`ElfProgramHeader`] that parsing failed on.
+        index: usize,
+        /// The error that was returned.
+        error: ParseElfProgramHeaderError,
+    },
 }
