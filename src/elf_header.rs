@@ -1,6 +1,6 @@
 //! Definitions and interfaces for interacting with the ELF file header.
 
-use core::mem;
+use core::{fmt, mem};
 
 use crate::{
     class::{Class, ClassParse},
@@ -259,6 +259,41 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
                 self.slice,
             ),
         }
+    }
+}
+
+impl<'slice, C: ClassParse, E: EncodingParse> fmt::Debug for ElfHeader<'slice, C, E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_struct = f.debug_struct("ElfHeader");
+
+        debug_struct.field("elf_ident", &self.elf_ident());
+        debug_struct.field("elf_type", &self.elf_type());
+        debug_struct.field("machine", &self.machine());
+        debug_struct.field("object_file_version", &self.object_file_version());
+
+        debug_struct.field("entry", &self.entry());
+        debug_struct.field("program_header_offset", &self.program_header_offset());
+        debug_struct.field("section_header_offset", &self.section_header_offset());
+
+        debug_struct.field("flags", &self.flags());
+        debug_struct.field("elf_header_size", &self.elf_header_size());
+
+        debug_struct.field(
+            "program_header_entry_size",
+            &self.program_header_entry_size(),
+        );
+        debug_struct.field("program_header_count", &self.program_header_count());
+        debug_struct.field(
+            "section_header_entry_size",
+            &self.section_header_entry_size(),
+        );
+        debug_struct.field("section_header_count", &self.section_header_count());
+        debug_struct.field(
+            "section_header_string_table_index",
+            &self.section_header_string_table_index(),
+        );
+
+        debug_struct.finish()
     }
 }
 
