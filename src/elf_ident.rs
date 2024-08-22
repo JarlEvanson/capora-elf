@@ -4,7 +4,7 @@ use core::mem;
 
 use crate::{
     class::{Class, ClassParse, UnsupportedClassError},
-    encoding::{Encoding, EncodingParse, ParseIntegerError, UnsupportedEncodingError},
+    encoding::{Encoding, EncodingParse, UnsupportedEncodingError},
     field_size,
     raw::elf_ident::{ElfIdent as RawElfIdent, OsAbi},
 };
@@ -21,12 +21,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
     /// as possible.
     pub fn parse(file: &'slice [u8]) -> Result<Self, ParseElfIdentError> {
         if file.len() < mem::size_of::<RawElfIdent>() {
-            return Err(ParseIntegerError::BoundsError {
-                read_offset: 0,
-                read_size: mem::size_of::<RawElfIdent>(),
-                data_size: file.len(),
-            }
-            .into());
+            return Err(ParseElfIdentError::FileTooSmall);
         }
 
         if file[..4] != RawElfIdent::MAGIC_BYTES {
@@ -36,9 +31,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
         let class = C::from_elf_class(file[mem::offset_of!(RawElfIdent, class)])?;
         let encoding = E::from_elf_data(file[mem::offset_of!(RawElfIdent, data)])?;
 
-        let header_version =
-            encoding.parse_u8_at(mem::offset_of!(RawElfIdent, header_version), file)?;
-
+        let header_version = file[mem::offset_of!(RawElfIdent, header_version)];
         if header_version != RawElfIdent::CURRENT_VERSION {
             return Err(ParseElfIdentError::UnsupportedElfHeaderVersion);
         }
@@ -71,8 +64,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
     pub fn os_abi(&self) -> OsAbi {
         OsAbi(
             self.encoding
-                .parse_u8_at(mem::offset_of!(RawElfIdent, os_abi), self.slice)
-                .unwrap(),
+                .parse_u8_at(mem::offset_of!(RawElfIdent, os_abi), self.slice),
         )
     }
 
@@ -80,7 +72,6 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
     pub fn abi_version(&self) -> u8 {
         self.encoding
             .parse_u8_at(mem::offset_of!(RawElfIdent, abi_version), self.slice)
-            .unwrap()
     }
 
     /// Returns the [`ClassParse`] that this ELF identifier header uses.
@@ -96,6 +87,8 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
 
 /// Various errors that can occur while parsing a [`ElfIdent`].
 pub enum ParseElfIdentError {
+    /// The given `file` was too small to contain an [`ElfIdent`].
+    FileTooSmall,
     /// The bytes occupying the magic bytes location did not match the specified ELF magic bytes.
     InvalidMagicBytes,
     /// The class of the ELF file is unsupported.
@@ -106,14 +99,6 @@ pub enum ParseElfIdentError {
     UnsupportedElfHeaderVersion,
     /// The padding of the header is non-zero.
     NonZeroPadding,
-    /// An error ocurred while parsing an integer.
-    ParseIntegerError(ParseIntegerError),
-}
-
-impl From<ParseIntegerError> for ParseElfIdentError {
-    fn from(value: ParseIntegerError) -> Self {
-        ParseElfIdentError::ParseIntegerError(value)
-    }
 }
 
 impl From<UnsupportedClassError> for ParseElfIdentError {
