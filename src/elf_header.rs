@@ -35,32 +35,29 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfHeader<'slice, C, E> {
                     return Err(ParseElfHeaderError::FileTooSmall);
                 }
 
-                if elf_ident
-                    .encoding_parse()
-                    .parse_u32_at(mem::offset_of!(Elf64Header, object_file_version), file)
-                    != CURRENT_OBJECT_FILE_VERSION
-                {
+                let elf_header = Self {
+                    slice: file,
+                    class: elf_ident.class_parse(),
+                    encoding: elf_ident.encoding_parse(),
+                };
+
+                if elf_header.object_file_version() != CURRENT_OBJECT_FILE_VERSION {
                     return Err(ParseElfHeaderError::UnsupportedElfFileVersion);
                 }
 
-                let elf_header_size = elf_ident.encoding_parse().parse_u16_at(mem::offset_of!(Elf64Header, elf_header_size), file);
-                if (elf_header_size as usize) < mem::size_of::<Elf64Header>() {
+                if (elf_header.elf_header_size() as usize) < mem::size_of::<Elf64Header>() {
                     return Err(ParseElfHeaderError::InvalidElfHeaderSize);
                 }
 
-                let program_header_entry_size = elf_ident.encoding_parse().parse_u16_at(
-                    mem::offset_of!(Elf64Header, program_header_entry_size),
-                    file,
-                );
-                if (program_header_entry_size as usize) < mem::size_of::<Elf64ProgramHeader>() {
+                if (elf_header.program_header_entry_size() as usize)
+                    < mem::size_of::<Elf64ProgramHeader>()
+                {
                     return Err(ParseElfHeaderError::InvalidProgramHeaderSize);
                 }
 
-                let section_header_entry_size = elf_ident.encoding_parse().parse_u16_at(
-                    mem::offset_of!(Elf64Header, section_header_entry_size),
-                    file,
-                );
-                if (section_header_entry_size as usize) < mem::size_of::<Elf64SectionHeader>() {
+                if (elf_header.section_header_entry_size() as usize)
+                    < mem::size_of::<Elf64SectionHeader>()
+                {
                     return Err(ParseElfHeaderError::InvalidSectionHeaderSize);
                 }
             }

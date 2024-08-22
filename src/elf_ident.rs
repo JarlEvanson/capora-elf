@@ -25,15 +25,20 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
             return Err(ParseElfIdentError::FileTooSmall);
         }
 
-        if file[..4] != RawElfIdent::MAGIC_BYTES {
-            return Err(ParseElfIdentError::InvalidMagicBytes);
-        }
-
         let class = C::from_elf_class(file[mem::offset_of!(RawElfIdent, class)])?;
         let encoding = E::from_elf_data(file[mem::offset_of!(RawElfIdent, data)])?;
 
-        let header_version = file[mem::offset_of!(RawElfIdent, header_version)];
-        if header_version != RawElfIdent::CURRENT_VERSION {
+        let elf_ident = Self {
+            slice: file,
+            class,
+            encoding,
+        };
+
+        if elf_ident.magic() != RawElfIdent::MAGIC_BYTES {
+            return Err(ParseElfIdentError::InvalidMagicBytes);
+        }
+
+        if elf_ident.header_version() != RawElfIdent::CURRENT_VERSION {
             return Err(ParseElfIdentError::UnsupportedElfHeaderVersion);
         }
 
@@ -44,11 +49,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfIdent<'slice, C, E> {
             return Err(ParseElfIdentError::NonZeroPadding);
         }
 
-        Ok(Self {
-            slice: file,
-            class,
-            encoding,
-        })
+        Ok(elf_ident)
     }
 
     /// Returns the magic bytes that identify this file as an ELF file.
