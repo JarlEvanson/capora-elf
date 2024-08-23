@@ -238,6 +238,19 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeaderTable<'slice, C, E
             encoding: self.encoding,
         })
     }
+
+    /// Returns the number of [`ElfProgramHeader`]s in the [`ElfProgramHeaderTable`].
+    pub fn len(&self) -> usize {
+        self.entry_count
+    }
+
+    /// Returns an iterator over the [`ElfProgramHeader`]s of this [`ElfProgramHeaderTable`].
+    pub fn iter(&self) -> Iter<'slice, C, E> {
+        Iter {
+            program_header_table: *self,
+            index: 0,
+        }
+    }
 }
 
 impl<'slice, C: ClassParse, E: EncodingParse> fmt::Debug for ElfProgramHeaderTable<'slice, C, E> {
@@ -264,4 +277,20 @@ pub enum ParseElfProgramHeaderTableError {
         /// The error that was returned.
         error: ParseElfProgramHeaderError,
     },
+}
+
+/// An iterator over the [`ElfProgramHeader`]s of an [`ElfProgramHeaderTable`].
+pub struct Iter<'slice, C: ClassParse, E: EncodingParse> {
+    program_header_table: ElfProgramHeaderTable<'slice, C, E>,
+    index: usize,
+}
+
+impl<'slice, C: ClassParse, E: EncodingParse> Iterator for Iter<'slice, C, E> {
+    type Item = ElfProgramHeader<'slice, C, E>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.program_header_table.get(self.index)?;
+        self.index = self.index.checked_add(1)?;
+        Some(next)
+    }
 }
