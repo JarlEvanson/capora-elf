@@ -1,6 +1,6 @@
 //! Definitions and interfaces for interacting with an ELF program header.
 
-use core::mem;
+use core::{fmt, mem};
 
 use crate::{
     class::{Class, ClassParse},
@@ -10,7 +10,7 @@ use crate::{
 
 /// Structure that describes how to locate and load data and configuration relevant to program
 /// execution.
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct ElfProgramHeader<'slice, C: ClassParse, E: EncodingParse> {
     pub(crate) slice: &'slice [u8],
     pub(crate) class: C,
@@ -152,6 +152,23 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeader<'slice, C, E> {
     }
 }
 
+impl<'slice, C: ClassParse, E: EncodingParse> fmt::Debug for ElfProgramHeader<'slice, C, E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_struct = f.debug_struct("ElfProgramHeader");
+
+        debug_struct.field("segment_type", &self.segment_type());
+        debug_struct.field("segment_flags", &self.flags());
+        debug_struct.field("file_offset", &self.file_offset());
+        debug_struct.field("virtual_address", &self.virtual_address());
+        debug_struct.field("physical_address", &self.physical_address());
+        debug_struct.field("file_size", &self.file_size());
+        debug_struct.field("memory_size", &self.memory_size());
+        debug_struct.field("alignment", &self.alignment());
+
+        debug_struct.finish()
+    }
+}
+
 /// Various errors that can occur while parsing an [`ElfProgramHeader`].
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ParseElfProgramHeaderError {
@@ -164,7 +181,7 @@ pub enum ParseElfProgramHeaderError {
 }
 
 /// A table of [`ElfProgramHeader`]s.
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct ElfProgramHeaderTable<'slice, C: ClassParse, E: EncodingParse> {
     pub(crate) slice: &'slice [u8],
     pub(crate) entry_count: usize,
@@ -223,7 +240,20 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeaderTable<'slice, C, E
     }
 }
 
+impl<'slice, C: ClassParse, E: EncodingParse> fmt::Debug for ElfProgramHeaderTable<'slice, C, E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_list = f.debug_list();
+
+        for i in 0..self.entry_count {
+            debug_list.entry(&self.get(i).unwrap());
+        }
+
+        debug_list.finish()
+    }
+}
+
 /// Various errors that can occur while parsing an [`ElfProgramHeaderTable`].
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ParseElfProgramHeaderTableError {
     /// The given slice was too small to contain the specified [`ElfProgramHeaderTable`].
     SliceTooSmall,
