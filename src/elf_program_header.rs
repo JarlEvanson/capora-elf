@@ -6,6 +6,7 @@ use crate::{
     class::{Class, ClassParse},
     encoding::EncodingParse,
     raw::elf_program_header::{Elf64ProgramHeader, SegmentFlags, SegmentType},
+    ElfFile,
 };
 
 /// Structure that describes how to locate and load data and configuration relevant to program
@@ -57,6 +58,15 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeader<'slice, C, E> {
                 Ok(elf_program_header)
             }
         }
+    }
+
+    /// Returns the data associated with the [`ElfProgramHeader`].
+    pub fn segment_data(&self, file: ElfFile<'slice, C, E>) -> Option<&[u8]> {
+        let base: usize = self.file_offset().try_into().ok()?;
+        let size: usize = self.file_offset().try_into().ok()?;
+
+        let max_offset = base.checked_add(size)?;
+        file.slice.get(base..max_offset)
     }
 
     /// Returns the [`SegmentType`], which determines how to interpret the [`ElfProgramHeader`]'s
