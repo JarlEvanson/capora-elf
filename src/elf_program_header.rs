@@ -37,6 +37,10 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeader<'slice, C, E> {
                     encoding,
                 };
 
+                if elf_program_header.file_size() > elf_program_header.memory_size() {
+                    return Err(ParseElfProgramHeaderError::InvalidSizing);
+                }
+
                 if !elf_program_header.alignment().is_power_of_two()
                     && elf_program_header.alignment() != 0
                 {
@@ -178,6 +182,8 @@ pub enum ParseElfProgramHeaderError {
     InvalidAlignment,
     /// The segment pointed to by the [`ElfProgramHeader`] is not properly aligned.
     UnalignedSegment,
+    /// File size cannot be larger than memory size.
+    InvalidSizing,
 }
 
 /// A table of [`ElfProgramHeader`]s.
