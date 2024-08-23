@@ -37,7 +37,9 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeader<'slice, C, E> {
                     encoding,
                 };
 
-                if !elf_program_header.alignment().is_power_of_two() {
+                if !elf_program_header.alignment().is_power_of_two()
+                    && elf_program_header.alignment() != 0
+                {
                     return Err(ParseElfProgramHeaderError::InvalidAlignment);
                 }
 
