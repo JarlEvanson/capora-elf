@@ -6,6 +6,7 @@
 use crate::{
     class::ClassParse,
     elf_header::{ElfHeader, ParseElfHeaderError},
+    elf_program_header::{ElfProgramHeaderTable, ParseElfProgramHeaderTableError},
     encoding::EncodingParse,
 };
 
@@ -28,6 +29,21 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfFile<'slice, C, E> {
     /// before returning.
     pub fn parse(file: &'slice [u8]) -> Result<Self, ParseElfFileError> {
         let elf_header = ElfHeader::<C, E>::parse(file)?;
+        if elf_header.program_header_count() != 0 {
+            if (file.len() as u64) < elf_header.program_header_offset() {
+                return Err(ParseElfFileError::ParseElfProgramHeaderTableError(
+                    ParseElfProgramHeaderTableError::SliceTooSmall,
+                ));
+            }
+
+            ElfProgramHeaderTable::parse(
+                &file[elf_header.program_header_offset() as usize..],
+                elf_header.program_header_count() as usize,
+                elf_header.program_header_entry_size() as usize,
+                elf_header.elf_ident().class_parse(),
+                elf_header.elf_ident().encoding_parse(),
+            )?;
+        }
 
         Ok(Self {
             slice: file,
@@ -44,18 +60,41 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfFile<'slice, C, E> {
             encoding: self.encoding,
         }
     }
+
+    /// Returns the [`ElfProgramHeaderTable`] of this [`ElfFile`].
+    pub fn program_header_table(&self) -> Option<ElfProgramHeaderTable<'slice, C, E>> {
+        if self.header().program_header_count() == 0 {
+            return None;
+        }
+
+        Some(ElfProgramHeaderTable {
+            slice: &self.slice[self.header().program_header_offset() as usize..],
+            entry_count: self.header().program_header_count() as usize,
+            entry_size: self.header().program_header_entry_size() as usize,
+            class: self.class,
+            encoding: self.encoding,
+        })
+    }
 }
 
 /// Various errors that can occur while parsing an [`ElfFile`].
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ParseElfFileError {
-    /// An error ocurred while parsing an [`ElfHeader`].
+    /// An error ocurred while parsing the [`ElfHeader`].
     ParseElfHeaderError(ParseElfHeaderError),
+    /// An error ocurred while parsing the [`ElfProgramHeaderTable`].
+    ParseElfProgramHeaderTableError(ParseElfProgramHeaderTableError),
 }
 
 impl From<ParseElfHeaderError> for ParseElfFileError {
     fn from(value: ParseElfHeaderError) -> Self {
         Self::ParseElfHeaderError(value)
+    }
+}
+
+impl From<ParseElfProgramHeaderTableError> for ParseElfFileError {
+    fn from(value: ParseElfProgramHeaderTableError) -> Self {
+        Self::ParseElfProgramHeaderTableError(value)
     }
 }
 
