@@ -18,6 +18,7 @@ pub mod encoding;
 pub mod raw;
 
 /// An ELF file.
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct ElfFile<'slice, C: ClassParse, E: EncodingParse> {
     slice: &'slice [u8],
     class: C,
