@@ -63,7 +63,7 @@ impl<'slice, C: ClassParse, E: EncodingParse> ElfProgramHeader<'slice, C, E> {
     /// Returns the data associated with the [`ElfProgramHeader`].
     pub fn segment_data(&self, file: ElfFile<'slice, C, E>) -> Option<&[u8]> {
         let base: usize = self.file_offset().try_into().ok()?;
-        let size: usize = self.file_offset().try_into().ok()?;
+        let size: usize = self.file_size().try_into().ok()?;
 
         let max_offset = base.checked_add(size)?;
         file.slice.get(base..max_offset)
